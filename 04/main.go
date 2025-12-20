@@ -18,7 +18,7 @@ var directions = []types.Direction{
 	types.NorthWest,
 }
 
-func canAccess(maze mazestuff.Maze, roll types.Point) bool {
+func canAccess(maze mazestuff.Maze[rune], roll types.Point) bool {
 	count := 0
 	for _, dir := range directions {
 		if newPos, ok := maze.Move(roll, dir); ok && maze.At(newPos) == '@' {
