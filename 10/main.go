@@ -3,11 +3,10 @@ package main
 import (
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/jack-barr3tt/gostuff/graphs"
-	"github.com/jack-barr3tt/gostuff/nums"
+	lp "github.com/jack-barr3tt/gostuff/linear_programming"
 	"github.com/jack-barr3tt/gostuff/parsing"
 	slicestuff "github.com/jack-barr3tt/gostuff/slices"
 	stringstuff "github.com/jack-barr3tt/gostuff/strings"
@@ -54,54 +53,35 @@ func computePart1(lighting string, buttons [][]int) int {
 
 func computePart2(buttons [][]int, joltage string) int {
 	pJoltage := stringstuff.GetNums(joltage)
-	init := strings.Join(slicestuff.Map(func(_ int) string { return "0" }, pJoltage), ",")
 
-	graph := graphs.NewVirtualGraph(func(n *graphs.Node) []graphs.Edge {
-		edges := []graphs.Edge{}
+	constraints := []lp.Constraint{}
 
-		state := stringstuff.GetNums(n.Name)
-
+	for i, j := range pJoltage {
+		row := []float64{}
 		for _, b := range buttons {
-			newState := make([]int, len(state))
-			copy(newState, state)
-
-			over := false
-
-			for _, pos := range b {
-				newState[pos] = (newState[pos] + 1)
-				if newState[pos] > pJoltage[pos] {
-					over = true
-					break
-				}
+			if slicestuff.IndexOf(i, b) != -1 {
+				row = append(row, 1)
+			} else {
+				row = append(row, 0)
 			}
-
-			if over {
-				continue
-			}
-
-			edges = append(edges, graphs.Edge{
-				Node: strings.Join(slicestuff.Map(func(i int) string {
-					return strconv.Itoa(i)
-				}, newState), ","),
-				Cost: 1,
-			})
+		}
+		constraint := lp.Constraint{
+			Value:        float64(j),
+			Coefficients: row,
+			Type:         lp.EQ,
 		}
 
-		return edges
-	}, init)
+		constraints = append(constraints, constraint)
+	}
 
-	_, len := graph.ShortestPath(init, joltage, func(n graphs.Node) int {
-		curr := stringstuff.GetNums(n.Name)
+	problem := lp.Problem{
+		Objective:   slicestuff.Repeat(1.0, len(buttons)),
+		Constraints: constraints,
+	}
 
-		diff := 0
-		for i := range curr {
-			diff += pJoltage[i] - curr[i]
-		}
+	solution := problem.Solve(true, true)
 
-		return diff
-	})
-
-	return len
+	return int(solution.Value)
 }
 
 func main() {
@@ -112,7 +92,7 @@ func main() {
 	part1 := 0
 	part2 := 0
 
-	slicestuff.ParallelMap(func(line string) bool {
+	for _, line := range lines {
 		lighting := ""
 		buttons := [][]int{}
 		joltage := ""
@@ -129,9 +109,7 @@ func main() {
 
 		part1 += computePart1(lighting, buttons)
 		part2 += computePart2(buttons, joltage)
-
-		return true
-	}, lines, nums.Min(10, len(lines)))
+	}
 
 	println(part1)
 	println(part2)
